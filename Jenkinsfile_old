@@ -1,8 +1,7 @@
 node {
-    def app
-    stage('Clone repository') {
-        checkout scm
-    }
+
+   agent any
+
     stage('Build image') {
          app = docker.build("achroo/kubernetescode")
     }

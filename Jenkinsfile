@@ -1,24 +1,31 @@
-node {
-    def app
-    stage('Clone repository') {
-        checkout scm
-    }
-    stage('Build image') {
-         app = docker.build("achroo/kubernetescode")
-    }
-    stage('Test image') {
-        app.inside {
-            sh 'echo "Tests passed"'
+pipeline {
+
+    agent any
+
+    environment {
+        registry = "achroo/kubernetescode"
+        registryCredential = 'dockerhub'
+     }
+
+    stages{
+        stage('Building image') {
+           steps{
+              script {
+                      dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                  }
+              }
+        }
+
+        stage('Deploy Image') {
+           steps{
+              script {
+                 docker.withRegistry( '', registryCredential ) {
+                 dockerImage.push("$BUILD_NUMBER")
+                 dockerImage.push('latest')
+                 }
+              }
+           }
         }
     }
-    stage('Push image') {
-        
-        docker.withRegistry('https://registry.hub.docker.com', 'dockerhub') {
-            app.push("${env.BUILD_NUMBER}")
-        }
-    }
-    stage('Trigger ManifestUpdate') {
-                echo "triggering updatemanifestjob"
-                build job: 'updatemanifest', parameters: [string(name: 'DOCKERTAG', value: env.BUILD_NUMBER)]
-        }
+
 }
